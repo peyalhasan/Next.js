@@ -1,5 +1,8 @@
+import { getUser } from "@/actions/Users";
+
+
 export default async function UserList() {
-    const users = []
+    const users = await getUser()
 
     return (
         <div className="box-secondary mt-10">
