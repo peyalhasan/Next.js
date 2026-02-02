@@ -2,13 +2,30 @@
 
 import connectMongo from "@/bdconnect/connectMongo";
 import User from "@/models/Users";
+import Wait from "@/utils/wait";
 import { revalidatePath } from "next/cache";
+import * as z from "zod";
 
-export const addUser = async (formData) => {
+const schema = z.object({
+    name: z.string().min(1, { message: 'Name is required' }),
+    email: z.string({
+        invalid_type_error: 'Invalid Email'
+    })
+})
 
+export const addUser = async (prevState,formData) => {
 
-    const name = formData.get("name");
-    const email = formData.get("email");
+    const rawData = Object.fromEntries(formData);
+
+    const validatedFields = schema.safeParse(rawData)
+
+    if (!validatedFields.success) {
+        return {
+            errors: validatedFields.error.flatten().fieldErrors
+        }
+    }
+    const { name, email } = validatedFields.data;
+
 
     const userData = {
         name,
@@ -16,30 +33,32 @@ export const addUser = async (formData) => {
     }
 
     try {
+        // Connect database First 
         await connectMongo();
 
-        //Insert into database 
+        // add dealy 
+
+        await Wait(3000)
+
+        // Insert to database 
+
         await new User(userData).save()
-
-        // Revalidate Users
-
         revalidatePath('/')
-
     } catch (err) {
-        console.log(err)
+        return {message: "Something went wrong!", errors:{}}
     }
 
 }
 
 
-export const getUser  = async()=>{
-    try{
+export const getUser = async () => {
+    try {
         await connectMongo();
 
         // Get users 
         const users = await User.find();
         return users
-    }catch(err){
+    } catch (err) {
         console.log(err)
     }
 }
